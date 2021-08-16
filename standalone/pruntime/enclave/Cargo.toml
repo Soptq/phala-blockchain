@@ -72,6 +72,8 @@ enclave-api = { path = "../enclave-api", default-features = false, features = ["
 
 csv-core = { version = "0.1.10", default-features = false }
 
+pink = { path = "../../../crates/pink" }
+
 # for light_validation
 derive_more = "0.99.0"
 hash-db = { version = "0.15.2", default-features = false }

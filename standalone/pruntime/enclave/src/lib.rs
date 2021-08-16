@@ -918,6 +918,9 @@ pub extern "C" fn ecall_init(sealing_path: *const u8, sealing_path_len: usize) -
     let mut local_state = LOCAL_STATE.lock().unwrap();
     local_state.sealing_path = String::from(sealing_path);
 
+    info!("Test contract");
+    pink::contract_test();
+
     info!("Enclave init OK");
     sgx_status_t::SGX_SUCCESS
 }
@@ -1192,6 +1195,7 @@ fn get_runtime_info(_input: &Map<String, Value>) -> Result<Value, Value> {
 
 fn test_ink(_input: &Map<String, Value>) -> Result<Value, Value> {
     info!("=======Begin Ink Contract Test=======");
+
 
     let testcases = vec![
         TestContract {
