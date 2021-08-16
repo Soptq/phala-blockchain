@@ -21,6 +21,7 @@ members = [
 	"crates/crypto",
 	"crates/prpc",
 	"crates/prpc-build",
+	"crates/pink",
 	"pallets/phala",
 	"pallets/bridge",
 	"scripts/toml-upgrade-version",
