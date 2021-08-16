@@ -6,5 +6,6 @@ pub mod prpc;
 pub mod actions;
 pub mod blocks;
 pub mod storage_sync;
+pub mod ecall_args;
 
 mod proto_generated;
