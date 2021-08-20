@@ -162,9 +162,15 @@ struct Args {
     #[structopt(
         default_value = "0",
         long,
-        help = "Set the charge transaction payment, unit: 1 balance"
+        help = "The charge transaction payment, unit: balance"
     )]
     tip: u64,
+    #[structopt(
+        default_value = "0",
+        long,
+        help = "The transaction longevity, should be a power of two between 4 and 65536. unit: block"
+    )]
+    longevity: u64,
 }
 
 struct BlockSyncState {
@@ -977,7 +983,10 @@ fn preprocess_args(args: &mut Args) {
 async fn main() {
     let mut args = Args::from_args();
     preprocess_args(&mut args);
+
     extra::set_tip(args.tip);
+    extra::set_period(args.longevity);
+
     let r = bridge(args).await;
     info!("bridge() exited with result: {:?}", r);
     // TODO: when got any error, we should wait and retry until it works just like a daemon.

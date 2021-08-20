@@ -42,6 +42,26 @@ impl<'a> MsgSync<'a> {
 
         self.maybe_update_signer_nonce().await?;
 
+        let period = crate::extra::period();
+        if period > 0 {
+            let cur_block = crate::get_block_at(self.client, None).await?.0;
+            let number = cur_block.block.header.number as u64;
+            let phase = number % period;
+            crate::extra::set_phase(phase);
+
+            {
+                let era = sp_runtime::generic::Era::Mortal(period, phase);
+                info!(
+                    "update era: block={}, period={}, phase={}, birth={}, death={}",
+                    number,
+                    period,
+                    phase,
+                    era.birth(number),
+                    era.death(number)
+                );
+            }
+        }
+
         for (sender, messages) in messages {
             if messages.is_empty() {
                 continue;

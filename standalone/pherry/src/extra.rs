@@ -15,8 +15,23 @@ use core::sync::atomic::{AtomicU64, Ordering};
 
 static TIP: AtomicU64 = AtomicU64::new(0);
 
+static PERIOD: AtomicU64 = AtomicU64::new(0);
+static PHASE: AtomicU64 = AtomicU64::new(0);
+
 pub fn set_tip(tip: u64) {
     TIP.store(tip, Ordering::Relaxed);
+}
+
+pub fn period() -> u64 {
+    PERIOD.load(Ordering::Relaxed)
+}
+
+pub fn set_period(blocks: u64) {
+    PERIOD.store(blocks, Ordering::Relaxed);
+}
+
+pub fn set_phase(blocks: u64) {
+    PHASE.store(blocks, Ordering::Relaxed);
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
@@ -53,12 +68,19 @@ where
 
     fn extra(&self) -> Self::Extra {
         let tip = TIP.load(Ordering::Relaxed);
+        let period = PERIOD.load(Ordering::Relaxed);
+        let phase = PHASE.load(Ordering::Relaxed);
+        let era = if period > 0 {
+            Era::Mortal(period, phase)
+        } else {
+            Era::Immortal
+        };
 
         (
             CheckSpecVersion(PhantomData, self.spec_version),
             CheckTxVersion(PhantomData, self.tx_version),
             CheckGenesis(PhantomData, self.genesis_hash),
-            CheckEra((Era::Immortal, PhantomData), self.genesis_hash),
+            CheckEra((era, PhantomData), self.genesis_hash),
             CheckNonce(self.nonce),
             CheckWeight(PhantomData),
             // NOTE: skipped the ZST CheckMqSequence<T> here.
