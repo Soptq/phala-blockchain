@@ -16,6 +16,7 @@ pub mod btc_lottery;
 pub mod geolocation;
 pub mod pink;
 // pub mod substrate_kitties;
+pub mod p2fa;
 
 // Disabled due to requiring &mut self in query
 // pub mod web3analytics;

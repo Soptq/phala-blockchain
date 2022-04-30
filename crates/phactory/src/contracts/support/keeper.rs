@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use crate::{
     contracts::{
         assets::Assets, balances::Balances, btc_lottery::BtcLottery, btc_price_bot::BtcPriceBot,
-        geolocation::Geolocation, guess_number::GuessNumber, pink::Pink, FatContract,
+        geolocation::Geolocation, guess_number::GuessNumber, p2fa::P2FA, pink::Pink, FatContract,
         NativeContext, NativeContract as _, TransactionError, TransactionResult,
     },
     types::{deopaque_query, OpaqueError, OpaqueQuery, OpaqueReply},
@@ -88,6 +88,7 @@ define_any_native_contract!(
         Geolocation(Geolocation),
         GuessNumber(GuessNumber),
         BtcPriceBot(BtcPriceBot),
+        P2FA(P2FA)
     }
 );
 
