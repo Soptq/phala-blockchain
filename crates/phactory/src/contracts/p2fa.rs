@@ -4,10 +4,9 @@ use std::string::String;
 use anyhow::Result;
 use parity_scale_codec::{Decode, Encode};
 use phala_mq::MessageOrigin;
-use std::convert::TryFrom;
-use bitcoin::bech32::ToBase32;
+use std::convert::TryInto;
 use hmac::Mac;
-use sp_core::hashing;
+use sp_core::{ByteArray, hashing};
 
 type HmacSha1 = hmac::Hmac<sha1::Sha1>;
 
@@ -18,6 +17,7 @@ use crate::contracts::{AccountId, NativeContext};
 extern crate runtime as chain;
 
 use phala_types::messaging::{P2FACommand};
+use pink::types::BlockNumber;
 
 type Command = P2FACommand;
 
@@ -53,11 +53,13 @@ pub enum Error {
 #[derive(Encode, Decode, Debug, Clone)]
 pub enum Request {
     GetBase32Secret { account: AccountId },
+    VerifyToken { account: AccountId, token: String },
 }
 
 #[derive(Encode, Decode, Debug, Clone)]
 pub enum Response {
     GetBase32Secret { data: String },
+    VerifyToken { valid: bool },
     Error(String),
 }
 
@@ -75,11 +77,11 @@ impl P2FA {
         )
     }
 
-    pub fn rand_secret(account: AccountId) -> Vec<u8> {
-        let hash_block = hashing::blake2_128(&context.block.block_number.to_be_bytes());
-        let hash_account = hashing::blake2_128(&account.to_base32());
+    pub fn rand_secret(block_number: BlockNumber, account: &AccountId) -> Vec<u8> {
+        let hash_block = hashing::blake2_128(&block_number.to_be_bytes());
+        let hash_account = hashing::blake2_128(account.as_slice());
 
-        let secret = hash_block ^ hash_account;
+        let secret = hash_block.iter().chain(&hash_account).cloned().collect();
         secret
     }
 
@@ -103,7 +105,8 @@ impl P2FA {
     pub fn generate(secret: Vec<u8>, time: u64) -> String {
         let result: &[u8] = &Self::sign(secret, time);
         let offset = (result.last().unwrap() & 15) as usize;
-        let result = u32::from_be_bytes(result[offset..offset + 4].try_into().unwrap()) & 0x7fff_ffff;
+        let result =
+            u32::from_be_bytes(result[offset..offset + 4].try_into().unwrap()) & 0x7fff_ffff;
         format!(
             "{1:00$}",
             DIGITS,
@@ -117,7 +120,8 @@ impl P2FA {
         for i in 0..SKEW * 2 + 1 {
             let step_time = (basestep + (i as u64)) * (DURATION_SECONDS as u64);
 
-            if constant_time_eq(Self::generate(secret.clone(), step_time).as_bytes(), token.as_bytes()) {
+            // TODO: need a constant time comparing
+            if Self::generate(secret.clone(), step_time) == token {
                 return true;
             }
         }
@@ -140,7 +144,7 @@ impl contracts::NativeContract for P2FA {
             Command::InitBinding {} => {
                 let sender = origin.account()?;
                 let initialized_user_totp = UserTOTP {
-                    secret: Self::rand_secret(),
+                    secret: Self::rand_secret(context.block.block_number, &sender),
                     status: Status::Initialized,
                 };
                 if let Some(user_totp) = self.data.get_mut(&sender) {
@@ -155,43 +159,39 @@ impl contracts::NativeContract for P2FA {
                 Ok(Default::default())
             }
 
-            Command::VerifyBinding { token: String } => {
+            Command::VerifyBinding { token } => {
                 let sender = origin.account()?;
 
                 if let Some(user_totp) = self.data.get_mut(&sender) {
-                    if user_totp.status != Status::Initialized {
+                    if !matches!(user_totp.status, Status::Initialized) {
                         return Err(TransactionError::BadCommand);
                     };
 
-                    if Self::check(token, user_totp.secret.clone(), context.block.now_ms) {
+                    if Self::check(token.as_str(), user_totp.secret.clone(), context.block.now_ms) {
                         user_totp.status = Status::Verified;
-                        Ok(Default::default())
+                        return Ok(Default::default());
                     } else {
-                        Err(TransactionError::BadInput)
+                        return Err(TransactionError::BadInput);
                     }
                 } else {
                     return Err(TransactionError::BadOrigin);
                 }
-
-                Ok(Default::default())
             }
 
-            Command::unbind{ token: String } => {
+            Command::Unbind{ token } => {
                 let sender = origin.account()?;
 
                 if !self.data.contains_key(&sender) {
                     return Err(TransactionError::BadOrigin);
                 }
 
-                let user_totp = self.data.get(&sender).ok_or(Error::NoRecord)?;
-                if Self::check(token, user_totp.secret.clone(), context.block.now_ms) {
+                let user_totp = self.data.get(&sender).expect("user_totp should exist");
+                if Self::check(token.as_str(), user_totp.secret.clone(), context.block.now_ms) {
                     self.data.remove(&sender);
-                    Ok(Default::default())
+                    return Ok(Default::default());
                 } else {
-                    Err(TransactionError::BadInput)
+                    return Err(TransactionError::BadInput);
                 }
-
-                Ok(Default::default())
             }
         }
     }
@@ -200,7 +200,7 @@ impl contracts::NativeContract for P2FA {
         &self,
         origin: Option<&chain::AccountId>,
         req: Request,
-        _: &mut contracts::QueryContext,
+        context: &mut contracts::QueryContext,
     ) -> Result<Response, Error> {
         match req {
             Request::GetBase32Secret { account } => {
@@ -210,6 +210,14 @@ impl contracts::NativeContract for P2FA {
                 let user_totp = self.data.get(&account).ok_or(Error::NoRecord)?;
                 let data = Self::base32_secret(&user_totp.secret.clone());
                 Ok(Response::GetBase32Secret { data })
+            }
+            Request::VerifyToken { account, token } => {
+                if origin != Some(&account) {
+                    return Err(Error::NotAuthorized);
+                }
+                let user_totp = self.data.get(&account).ok_or(Error::NoRecord)?;
+                let valid = Self::check(token.as_str(), user_totp.secret.clone(), context.now_ms);
+                Ok(Response::VerifyToken { valid })
             }
         }
     }
