@@ -716,6 +716,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349a06037c7bf932dd7e7d1f653678b2038b9ad46a74102f1fc7bd7872678cce"
 
 [[package]]
+name = "base32"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23ce669cd6c8588f79e15cf450314f9638f967fc5770ff1c7c1deb0925ea7cfa"
+
+[[package]]
 name = "base58"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7188,6 +7194,7 @@ dependencies = [
  "async-executor",
  "async-io",
  "async-std",
+ "base32",
  "base64 0.13.0",
  "bit-vec",
  "bitcoin",
@@ -7206,6 +7213,7 @@ dependencies = [
  "hash-db",
  "hex",
  "hex-literal",
+ "hmac 0.12.1",
  "insta",
  "itertools",
  "lazy_static",
@@ -7239,6 +7247,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_path_to_error",
+ "sha1 0.10.1",
  "sp-application-crypto",
  "sp-core",
  "sp-externalities",
@@ -10529,6 +10538,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha1"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77f4e7f65455545c2153c1253d25056825e77ee2533f0e41deb65a93a34852f"
+dependencies = [
+ "cfg-if 1.0.0",
+ "cpufeatures 0.2.2",
+ "digest 0.10.3",
+]
+
+[[package]]
 name = "sha1_smol"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11660,7 +11680,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha1",
+ "sha1 0.6.1",
  "syn 1.0.91",
 ]
 

@@ -23,6 +23,7 @@ pub mod pink;
 
 pub mod btc_price_bot;
 pub mod guess_number;
+pub mod p2fa;
 
 pub use phala_types::contract::*;
 

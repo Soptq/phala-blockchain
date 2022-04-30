@@ -232,6 +232,28 @@ pub mod messaging {
         }
     }
 
+    // Messages for Phala 2FA
+    #[derive(Debug, Clone, Encode, Decode, TypeInfo)]
+    pub enum P2FACommand {
+        InitBinding {},
+        VerifyBinding { token: String },
+        Unbind { token: String },
+    }
+
+    impl P2FACommand {
+        pub fn init_binding() -> Self {
+            Self::InitBinding { }
+        }
+
+        pub fn verify_binding(token: String) -> Self {
+            Self::VerifyBinding { token }
+        }
+
+        pub fn unbind(token: String) -> Self {
+            Self::Unbind { token }
+        }
+    }
+
     // Bind on-chain GuessNumberCommand message to the GUESS_NUMBER contract
     #[derive(Debug, Clone, Encode, Decode)]
     pub enum GuessNumberCommand {
